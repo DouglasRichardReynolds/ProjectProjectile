@@ -78,6 +78,17 @@ void AProjectProjectileCharacter::SetupPlayerInputComponent(UInputComponent* Pla
 				&AProjectProjectileCharacter::AttemptCapture
 			);
 		}
+
+		// Releasing
+		if (ReleaseAction)
+		{
+			EnhancedInputComponent->BindAction(
+				ReleaseAction,
+				ETriggerEvent::Started,
+				this,
+				&AProjectProjectileCharacter::AttemptRelease
+			);
+		}
 	}
 	else
 	{
@@ -245,4 +256,25 @@ void AProjectProjectileCharacter::Tick(float DeltaTime)
 			);
 		}
 	}
+}
+
+void AProjectProjectileCharacter::AttemptRelease()
+{
+	if (!IsValid(CapturedProjectile))
+	{
+		return;
+	}
+
+	const FVector LaunchDirection =
+		FirstPersonCameraComponent->GetForwardVector();
+
+	CapturedProjectile->ReleaseProjectile(LaunchDirection);
+
+	CapturedProjectile = nullptr;
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Player released projectile!")
+	);
 }

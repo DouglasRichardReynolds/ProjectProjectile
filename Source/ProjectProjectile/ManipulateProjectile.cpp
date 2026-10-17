@@ -4,6 +4,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 AManipulateProjectile::AManipulateProjectile()
 {
@@ -87,7 +88,14 @@ void AManipulateProjectile::OnProjectileHit(
         return;
     }
 
-    if (!OtherActor || OtherActor == this || OtherActor == GetOwner())
+    if (!OtherActor || OtherActor == this)
+    {
+        return;
+    }
+
+    // Ignore the original owner only while the projectile is flying.
+    if (ProjectileState == EProjectileState::Flying &&
+        OtherActor == GetOwner())
     {
         return;
     }
@@ -98,6 +106,18 @@ void AManipulateProjectile::OnProjectileHit(
         TEXT("Projectile hit: %s"),
         *OtherActor->GetName()
     );
+
+    // Only redirected projectiles deal damage.
+    if (ProjectileState == EProjectileState::Redirected)
+    {
+        UGameplayStatics::ApplyDamage(
+            OtherActor,
+            Damage,
+            nullptr,
+            this,
+            UDamageType::StaticClass()
+        );
+    }
 
     Destroy();
 }
@@ -133,4 +153,39 @@ void AManipulateProjectile::CaptureProjectile()
 bool AManipulateProjectile::CanBeCaptured() const
 {
     return ProjectileState == EProjectileState::Flying;
+}
+
+void AManipulateProjectile::ReleaseProjectile(const FVector& Direction)
+{
+    if (ProjectileState != EProjectileState::Captured)
+    {
+        return;
+    }
+
+    ProjectileState = EProjectileState::Redirected;
+
+    const FVector LaunchDirection = Direction.GetSafeNormal();
+
+    // Re-enable collision.
+    CollisionComponent->SetCollisionEnabled(
+        ECollisionEnabled::QueryAndPhysics
+    );
+
+    // Point the projectile toward the target.
+    SetActorRotation(LaunchDirection.Rotation());
+
+    // Resume projectile movement.
+    ProjectileMovement->Velocity =
+        LaunchDirection * ProjectileSpeed;
+
+    ProjectileMovement->Activate(true);
+
+    // Restore the projectile's lifetime.
+    SetLifeSpan(5.0f);
+
+    UE_LOG(
+        LogTemp,
+        Warning,
+        TEXT("Projectile redirected!")
+    );
 }

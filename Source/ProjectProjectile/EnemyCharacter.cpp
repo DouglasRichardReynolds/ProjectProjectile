@@ -22,6 +22,8 @@ void AEnemyCharacter::BeginPlay()
         FireRate,
         true
     );
+
+    CurrentHealth = MaxHealth;
 }
 
 void AEnemyCharacter::FireProjectile()
@@ -63,4 +65,44 @@ void AEnemyCharacter::FireProjectile()
         SpawnRotation,
         SpawnParams
     );
+}
+
+float AEnemyCharacter::TakeDamage(
+    float DamageAmount,
+    FDamageEvent const& DamageEvent,
+    AController* EventInstigator,
+    AActor* DamageCauser
+)
+{
+    const float ActualDamage = FMath::Max(0.0f, DamageAmount);
+
+    if (CurrentHealth <= 0.0f || ActualDamage <= 0.0f)
+    {
+        return 0.0f;
+    }
+
+    CurrentHealth = FMath::Max(0.0f, CurrentHealth - ActualDamage);
+
+    UE_LOG(
+        LogTemp,
+        Warning,
+        TEXT("Enemy Health: %.0f / %.0f"),
+        CurrentHealth,
+        MaxHealth
+    );
+
+    if (CurrentHealth <= 0.0f)
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("Enemy defeated!")
+        );
+
+        GetWorldTimerManager().ClearTimer(FireTimerHandle);
+
+        Destroy();
+    }
+
+    return ActualDamage;
 }

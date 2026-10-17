@@ -38,6 +38,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "Projectile")
     bool CanBeCaptured() const;
 
+    // Launches a captured projectile in the specified direction
+    UFUNCTION(BlueprintCallable, Category = "Projectile")
+    void ReleaseProjectile(const FVector& Direction);
+
 protected:
     virtual void BeginPlay() override;
 

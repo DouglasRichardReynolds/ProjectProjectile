@@ -49,7 +49,10 @@ protected:
 
 	// Input action for catching projectiles
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	UInputAction* CaptureAction;
+	UInputAction* CaptureAction = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* ReleaseAction = nullptr;
 
 	// Maximum distance for catching a projectile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Capture")
@@ -84,6 +87,8 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	void AttemptRelease();
 
 protected:
 	// APawn interface

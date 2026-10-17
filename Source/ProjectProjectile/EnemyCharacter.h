@@ -31,4 +31,18 @@ protected:
     FTimerHandle FireTimerHandle;
 
     void FireProjectile();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
+    float MaxHealth = 100.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
+    float CurrentHealth = 100.0f;
+
+    virtual float TakeDamage(
+        float DamageAmount,
+        struct FDamageEvent const& DamageEvent,
+        class AController* EventInstigator,
+        AActor* DamageCauser
+    ) override;
+
 };
