@@ -45,7 +45,6 @@ AManipulateProjectile::AManipulateProjectile()
     InitialLifeSpan = 5.0f;
 }
 
-
 void AManipulateProjectile::BeginPlay()
 {
     Super::BeginPlay();
@@ -75,7 +74,6 @@ void AManipulateProjectile::BeginPlay()
     );
 }
 
-
 void AManipulateProjectile::OnProjectileHit(
     UPrimitiveComponent* HitComponent,
     AActor* OtherActor,
@@ -84,20 +82,9 @@ void AManipulateProjectile::OnProjectileHit(
     const FHitResult& Hit
 )
 {
-    UE_LOG(
-        LogTemp,
-        Warning,
-        TEXT("Projectile collision detected!")
-    );
-
-    if (GEngine)
+    if (ProjectileState == EProjectileState::Captured)
     {
-        GEngine->AddOnScreenDebugMessage(
-            -1,
-            5.0f,
-            FColor::Red,
-            TEXT("PROJECTILE HIT!")
-        );
+        return;
     }
 
     if (!OtherActor || OtherActor == this || OtherActor == GetOwner())
@@ -113,4 +100,37 @@ void AManipulateProjectile::OnProjectileHit(
     );
 
     Destroy();
+}
+
+void AManipulateProjectile::CaptureProjectile()
+{
+    if (!CanBeCaptured())
+    {
+        return;
+    }
+
+    ProjectileState = EProjectileState::Captured;
+
+    // Stop the projectile immediately.
+    ProjectileMovement->StopMovementImmediately();
+    ProjectileMovement->Deactivate();
+
+    // Prevent the projectile from hitting anything while held.
+    CollisionComponent->SetCollisionEnabled(
+        ECollisionEnabled::NoCollision
+    );
+
+    // Keep the projectile alive while captured.
+    SetLifeSpan(0.0f);
+
+    UE_LOG(
+        LogTemp,
+        Warning,
+        TEXT("Projectile captured!")
+    );
+}
+
+bool AManipulateProjectile::CanBeCaptured() const
+{
+    return ProjectileState == EProjectileState::Flying;
 }

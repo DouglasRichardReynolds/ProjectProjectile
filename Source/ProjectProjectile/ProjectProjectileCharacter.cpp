@@ -10,6 +10,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
+#include "ManipulateProjectile.h"
+#include "Engine/World.h"
+#include "Engine/Engine.h"
+#include "Engine/OverlapResult.h"
+#include "DrawDebugHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -36,6 +41,8 @@ AProjectProjectileCharacter::AProjectProjectileCharacter()
 	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 
+	PrimaryActorTick.bCanEverTick = true;
+
 }
 
 void AProjectProjectileCharacter::BeginPlay()
@@ -60,6 +67,17 @@ void AProjectProjectileCharacter::SetupPlayerInputComponent(UInputComponent* Pla
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AProjectProjectileCharacter::Look);
+
+		// Capturing
+		if (CaptureAction)
+		{
+			EnhancedInputComponent->BindAction(
+				CaptureAction,
+				ETriggerEvent::Started,
+				this,
+				&AProjectProjectileCharacter::AttemptCapture
+			);
+		}
 	}
 	else
 	{
@@ -91,5 +109,140 @@ void AProjectProjectileCharacter::Look(const FInputActionValue& Value)
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+AManipulateProjectile* AProjectProjectileCharacter::FindCapturableProjectile()
+{
+	if (!FirstPersonCameraComponent)
+	{
+		return nullptr;
+	}
+
+	const FVector CameraLocation =
+		FirstPersonCameraComponent->GetComponentLocation();
+
+	const FVector CameraForward =
+		FirstPersonCameraComponent->GetForwardVector();
+
+	const FVector TraceEnd =
+		CameraLocation + CameraForward * CaptureRange;
+
+	TArray<FHitResult> HitResults;
+
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	const bool bFound = GetWorld()->SweepMultiByObjectType(
+		HitResults,
+		CameraLocation,
+		TraceEnd,
+		FQuat::Identity,
+		ObjectParams,
+		FCollisionShape::MakeSphere(100.0f),
+		QueryParams
+	);
+
+	AManipulateProjectile* BestProjectile = nullptr;
+	float BestDistance = CaptureRange + 1.0f;
+
+	if (bFound)
+	{
+		for (const FHitResult& Hit : HitResults)
+		{
+			AManipulateProjectile* Projectile =
+				Cast<AManipulateProjectile>(Hit.GetActor());
+
+			if (!IsValid(Projectile) || !Projectile->CanBeCaptured())
+			{
+				continue;
+			}
+
+			const float Distance = FVector::Dist(
+				CameraLocation,
+				Projectile->GetActorLocation()
+			);
+
+			if (Distance <= CaptureRange && Distance < BestDistance)
+			{
+				BestProjectile = Projectile;
+				BestDistance = Distance;
+			}
+		}
+	}
+
+	return BestProjectile;
+}
+
+void AProjectProjectileCharacter::AttemptCapture()
+{
+	if (IsValid(CapturedProjectile))
+	{
+		return;
+	}
+
+	AManipulateProjectile* BestProjectile = FindCapturableProjectile();
+
+	if (BestProjectile)
+	{
+		BestProjectile->CaptureProjectile();
+		CapturedProjectile = BestProjectile;
+
+		UE_LOG(LogTemp, Warning, TEXT("Player captured a projectile!"));
+	}
+}
+
+void AProjectProjectileCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Keep a captured projectile in front of the player
+	if (IsValid(CapturedProjectile))
+	{
+		const FVector CameraLocation =
+			FirstPersonCameraComponent->GetComponentLocation();
+
+		const FVector CameraForward =
+			FirstPersonCameraComponent->GetForwardVector();
+
+		const FVector HoldLocation =
+			CameraLocation + CameraForward * HoldDistance;
+
+		CapturedProjectile->SetActorLocation(HoldLocation);
+	}
+	else
+	{
+		CapturedProjectile = nullptr;
+	}
+
+	// Check whether a projectile is available to capture
+	const bool bNewCaptureReady =
+		(!IsValid(CapturedProjectile) && IsValid(FindCapturableProjectile()));
+
+	bCaptureReady = bNewCaptureReady;
+
+	if (GEngine)
+	{
+		if (bCaptureReady)
+		{
+			GEngine->AddOnScreenDebugMessage(
+				100,
+				0.0f,
+				FColor::Green,
+				TEXT("CAPTURE READY")
+			);
+		}
+		else
+		{
+			GEngine->AddOnScreenDebugMessage(
+				100,
+				0.0f,
+				FColor::White,
+				TEXT(" ")
+			);
+		}
 	}
 }

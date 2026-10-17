@@ -10,6 +10,14 @@ class USphereComponent;
 class UStaticMeshComponent;
 class UProjectileMovementComponent;
 
+UENUM(BlueprintType)
+enum class EProjectileState : uint8
+{
+    Flying,
+    Captured,
+    Redirected
+};
+
 UCLASS()
 class PROJECTPROJECTILE_API AManipulateProjectile : public AActor
 {
@@ -17,6 +25,18 @@ class PROJECTPROJECTILE_API AManipulateProjectile : public AActor
 
 public:
     AManipulateProjectile();
+
+    // Current state of the projectile
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
+    EProjectileState ProjectileState = EProjectileState::Flying;
+
+    // Stops the projectile so it can be captured
+    UFUNCTION(BlueprintCallable, Category = "Projectile")
+    void CaptureProjectile();
+
+    // Returns whether the projectile is available to capture
+    UFUNCTION(BlueprintPure, Category = "Projectile")
+    bool CanBeCaptured() const;
 
 protected:
     virtual void BeginPlay() override;

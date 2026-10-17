@@ -12,6 +12,8 @@ class USkeletalMeshComponent;
 class UCameraComponent;
 class UInputAction;
 class UInputMappingContext;
+class AManipulateProjectile;
+
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -40,8 +42,35 @@ class AProjectProjectileCharacter : public ACharacter
 public:
 	AProjectProjectileCharacter();
 
+	virtual void Tick(float DeltaTime) override;
+
 protected:
 	virtual void BeginPlay();
+
+	// Input action for catching projectiles
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* CaptureAction;
+
+	// Maximum distance for catching a projectile
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Capture")
+	float CaptureRange = 500.0f;
+
+	// Distance the projectile stays in front of the camera
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Capture")
+	float HoldDistance = 150.0f;
+
+	// Projectile currently held by the player
+	UPROPERTY()
+	AManipulateProjectile* CapturedProjectile = nullptr;
+
+	// Attempts to catch a projectile
+	void AttemptCapture();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile Capture")
+	bool bCaptureReady = false;
+
+	// Finds the best projectile the player can currently capture
+	AManipulateProjectile* FindCapturableProjectile();
 
 public:
 		
