@@ -15,6 +15,7 @@
 #include "Engine/Engine.h"
 #include "Engine/OverlapResult.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -49,6 +50,8 @@ void AProjectProjectileCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+
+	CurrentHealth = MaxHealth;
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -277,4 +280,39 @@ void AProjectProjectileCharacter::AttemptRelease()
 		Warning,
 		TEXT("Player released projectile!")
 	);
+}
+
+float AProjectProjectileCharacter::TakeDamage(
+	float DamageAmount,
+	const FDamageEvent& DamageEvent,
+	AController* EventInstigator,
+	AActor* DamageCauser
+)
+{
+	if (CurrentHealth <= 0.0f || DamageAmount <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	const float ActualDamage = FMath::Min(DamageAmount, CurrentHealth);
+
+	CurrentHealth -= ActualDamage;
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Player Health: %.0f / %.0f"),
+		CurrentHealth,
+		MaxHealth
+	);
+
+	if (CurrentHealth <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player defeated!"));
+
+		GetCharacterMovement()->DisableMovement();
+		DisableInput(Cast<APlayerController>(GetController()));
+	}
+
+	return ActualDamage;
 }

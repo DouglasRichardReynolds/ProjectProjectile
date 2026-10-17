@@ -19,7 +19,7 @@ struct FInputActionValue;
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 UCLASS(config=Game)
-class AProjectProjectileCharacter : public ACharacter
+class PROJECTPROJECTILE_API AProjectProjectileCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -44,8 +44,21 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
+	float MaxHealth = 100.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
+	float CurrentHealth = 100.0f;
+
+	virtual float TakeDamage(
+		float DamageAmount,
+		const FDamageEvent& DamageEvent,
+		AController* EventInstigator,
+		AActor* DamageCauser
+	) override;
+
 protected:
-	virtual void BeginPlay();
+	virtual void BeginPlay() override;
 
 	// Input action for catching projectiles
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")

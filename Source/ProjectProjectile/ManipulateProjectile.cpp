@@ -5,6 +5,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "ProjectProjectileCharacter.h"
+#include "EnemyCharacter.h"
 
 AManipulateProjectile::AManipulateProjectile()
 {
@@ -107,18 +109,36 @@ void AManipulateProjectile::OnProjectileHit(
         *OtherActor->GetName()
     );
 
-    // Only redirected projectiles deal damage.
-    if (ProjectileState == EProjectileState::Redirected)
+    if (ProjectileState == EProjectileState::Flying)
     {
-        UGameplayStatics::ApplyDamage(
-            OtherActor,
-            Damage,
-            nullptr,
-            this,
-            UDamageType::StaticClass()
-        );
+        // Enemy-fired projectiles can damage the player.
+        if (OtherActor->IsA(AProjectProjectileCharacter::StaticClass()))
+        {
+            UGameplayStatics::ApplyDamage(
+                OtherActor,
+                20.0f,
+                nullptr,
+                this,
+                UDamageType::StaticClass()
+            );
+        }
+    }
+    else if (ProjectileState == EProjectileState::Redirected)
+    {
+        // Redirected projectiles damage enemies.
+        if (OtherActor->IsA(AEnemyCharacter::StaticClass()))
+        {
+            UGameplayStatics::ApplyDamage(
+                OtherActor,
+                Damage,
+                nullptr,
+                this,
+                UDamageType::StaticClass()
+            );
+        }
     }
 
+    // Destroy the projectile after hitting something.
     Destroy();
 }
 
